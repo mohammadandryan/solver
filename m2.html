@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#42b549">
+        <title>Mohammath Solver</title>
+        <style>
+            body, html {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                background-color: #f3f4f5;
+            }
+            .chat-container {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                max-width: 900px;
+                margin: 0 auto;
+                background-color: #ffffff;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            .chat-header {
+                padding: 20px;
+                background-color: #42b549;
+                color: white;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            .chat-messages {
+                flex-grow: 1;
+                overflow-y: auto;
+                padding: 20px;
+                background-image: linear-gradient(rgba(66, 181, 73, 0.1) 1px, transparent 1px), 
+                                  linear-gradient(90deg, rgba(66, 181, 73, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .message {
+                margin-bottom: 20px;
+                line-height: 1.5;
+            }
+            .user-message {
+                text-align: right;
+            }
+            .bot-message {
+                text-align: left;
+            }
+            .message-content {
+                display: inline-block;
+                max-width: 80%;
+                padding: 12px 18px;
+                border-radius: 18px;
+                font-size: 16px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            .user-message .message-content {
+                background-color: #42b549;
+                color: #ffffff;
+            }
+            .bot-message .message-content {
+                background-color: #ffffff;
+                color: #000000;
+                border: 1px solid #e0e0e0;
+            }
+            .chat-input {
+                padding: 20px;
+                background-color: #ffffff;
+                border-top: 1px solid #e0e0e0;
+            }
+            .input-container {
+                display: flex;
+                align-items: center;
+            }
+            #user-input {
+                flex-grow: 1;
+                padding: 12px;
+                border: 1px solid #42b549;
+                border-radius: 8px;
+                font-size: 16px;
+                resize: none;
+                height: 24px;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            #send-button {
+                padding: 12px 20px;
+                margin-left: 10px;
+                background-color: #42b549;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background-color 0.3s;
+            }
+            #send-button:hover {
+                background-color: #3aa241;
+            }
+            #send-button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+        </style>
+    </head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Mohammath Solver
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                <span class="message-content">Halo! Masukkan cryptarithm Anda, batas huruf unik = 10. (contoh: SEND + MORE = MONEY). More about <a style="text-decoration: none;" href="https://www.tiktok.com/@mohammadandryan">Mohammath</a>.</span>
+            </div>
+        </div>
+        <div class="chat-input">
+            
+            <div class="input-container">
+                <textarea id="user-input" placeholder="Ketik cryptarithm Anda di sini..." rows="1"></textarea>
+                <button id="send-button" disabled>Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
+            
+            const messageContent = document.createElement('span');
+            messageContent.classList.add('message-content');
+            messageContent.textContent = message;
+            
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function handleUserInput() {
+            const message = userInput.value.trim();
+            if (message) {
+                addMessage(message, true);
+                userInput.value = '';
+                userInput.style.height = '24px';
+                sendButton.disabled = true;
+                let res = solveCryptarithm(message);
+                setTimeout(() => {
+                    addMessage(res);
+                }, 1000);
+            }
+        }
+
+        sendButton.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleUserInput();
+            }
+        });
+
+        userInput.addEventListener('input', () => {
+            sendButton.disabled = userInput.value.trim() === '';
+            userInput.style.height = 'auto';
+            userInput.style.height = userInput.scrollHeight + 'px';
+        });
+
+        function solveCryptarithm(cryptarithm) {
+            const [left, right] = cryptarithm.split('=').map(s => s.trim());
+            const terms = left.split('+').map(s => s.trim());
+            terms.push(right);
+
+            const uniqueLetters = [...new Set(cryptarithm.match(/[A-Z]/g))];
+            if (uniqueLetters.length > 10) {
+                return "Terlalu banyak huruf unik (maks 10)";
+            }
+
+            const solution = backtrack(terms, uniqueLetters);
+            if (solution) {
+                let solutionString = uniqueLetters.map(letter => `${letter}=${solution[letter]}`).join(', ');
+                
+                const solvedTerms = terms.map(term => 
+                    parseInt(term.split('').map(char => solution[char]).join(''))
+                );
+                const fullSolution = `${solvedTerms.slice(0, -1).join(' + ')} = ${solvedTerms[solvedTerms.length - 1]}`;
+                return `Solusi ditemukan: ${fullSolution}`;
+                // return `Solusi ditemukan: ${solutionString}\nHasil lengkap: ${fullSolution}`;
+            } else {
+                return "Tidak ada solusi yang ditemukan";
+            }
+        }
+
+        function backtrack(terms, letters, assignment = {}, index = 0) {
+            if (index === letters.length) {
+                return isValid(terms, assignment) ? assignment : null;
+            }
+
+            for (let digit = 0; digit <= 9; digit++) {
+                if (Object.values(assignment).includes(digit)) continue;
+                assignment[letters[index]] = digit;
+                const result = backtrack(terms, letters, assignment, index + 1);
+                if (result) return result;
+                delete assignment[letters[index]];
+            }
+
+            return null;
+        }
+
+        function isValid(terms, assignment) {
+            const values = terms.map(term => {
+                if (assignment[term[0]] === 0) return null; // Leading zero check
+                return parseInt(term.split('').map(char => assignment[char]).join(''));
+            });
+
+            if (values.includes(null)) return false;
+
+            const sum = values.slice(0, -1).reduce((a, b) => a + b, 0);
+            return sum === values[values.length - 1];
+        }
+    </script>
+</body>
+</html>
